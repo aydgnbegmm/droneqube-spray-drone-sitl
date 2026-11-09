@@ -18,6 +18,18 @@
   <table>
     <tr>
       <td width="50%">
+        <img src="figures/demo_field_mission.gif" alt="16L Spray Drone Takeoff & Agricultural Mission" width="100%"/>
+        <br/>
+        <em>16 L agricultural drone on precision landing pad with Mission Planner 43-waypoint survey grid</em>
+      </td>
+      <td width="50%">
+        <img src="figures/demo_sitl_scenarios.gif" alt="Automated Comparative Scenario Execution" width="100%"/>
+        <br/>
+        <em>Automated MAVLink scenario runner (empty vs. full vs. full_tuned) and precision pad landing</em>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%">
         <img src="figures/gazebo_farm_field.jpg" alt="Gazebo Agricultural Field & Mission Planner" width="100%"/>
         <br/>
         <em>Custom Gazebo agricultural field aligned with Mission Planner survey grid and MAVProxy console</em>
