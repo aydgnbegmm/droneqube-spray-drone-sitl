@@ -1,0 +1,6 @@
+=== SİSTEM SÜRÜMLERİ ===
+Description:	Ubuntu 24.04.4 LTS
+Gazebo Sim, version 8.11.0
+Python 3.12.3
+Name: pymavlink
+Version: 2.4.50

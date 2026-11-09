@@ -1,0 +1,171 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="farm_field">
+    <physics name="1ms" type="ignore">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu">
+    </plugin>
+    <plugin filename="gz-sim-navsat-system"
+      name="gz::sim::systems::NavSat">
+    </plugin>
+
+    <scene>
+      <ambient>1.0 1.0 1.0</ambient>
+      <background>0.8 0.8 0.8</background>
+      <sky></sky>
+    </scene>
+
+    <spherical_coordinates>
+      <latitude_deg>-35.363262</latitude_deg>
+      <longitude_deg>149.165237</longitude_deg>
+      <elevation>584</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.85 0.85 0.85 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Zemin Düzlemi (Yeşil Çim Zemin) -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>600 600</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>600 600</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.25 0.45 0.2 1.0</ambient>
+            <diffuse>0.3 0.55 0.25 1.0</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- GERÇEK KOORDİNATLARA HİZALANMIŞ TARLA (Mission Planner Rota Altı: X=-85m, Y=+22m) -->
+    <model name='agricultural_field'>
+      <static>true</static>
+      <!-- Tam olarak waypointlerin merkezine oturtuyoruz -->
+      <pose>-85 22 0.015 0 0 0.17</pose>
+      <link name='field_link'>
+        <visual name='field_soil'>
+          <geometry>
+            <box>
+              <size>65 95 0.02</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.38 0.25 0.14 1.0</ambient>
+            <diffuse>0.48 0.32 0.18 1.0</diffuse>
+            <specular>0.05 0.05 0.05 1.0</specular>
+          </material>
+        </visual>
+        <!-- 6 Sıra Ekin / Tarım Şeridi -->
+        <visual name='row_1'>
+          <pose>-22 0 0.03 0 0 0</pose>
+          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
+        </visual>
+        <visual name='row_2'>
+          <pose>-13 0 0.03 0 0 0</pose>
+          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
+        </visual>
+        <visual name='row_3'>
+          <pose>-4 0 0.03 0 0 0</pose>
+          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
+        </visual>
+        <visual name='row_4'>
+          <pose>5 0 0.03 0 0 0</pose>
+          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
+        </visual>
+        <visual name='row_5'>
+          <pose>14 0 0.03 0 0 0</pose>
+          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
+        </visual>
+        <visual name='row_6'>
+          <pose>23 0 0.03 0 0 0</pose>
+          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- HASSAS İNİŞ PEDİ & DOLUM İSTASYONU (Kalkış / Home Noktası: X=0, Y=0) -->
+    <model name='precision_landing_pad'>
+      <static>true</static>
+      <pose>0 0 0.015 0 0 0</pose>
+      <link name='pad_link'>
+        <visual name='pad_base'>
+          <geometry>
+            <cylinder>
+              <radius>1.2</radius>
+              <length>0.02</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.9 0.6 0.0 1.0</ambient>
+            <diffuse>1.0 0.7 0.0 1.0</diffuse>
+          </material>
+        </visual>
+        <!-- Merkez Hedef Dairesi -->
+        <visual name='pad_center'>
+          <pose>0 0 0.012 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.4</radius>
+              <length>0.005</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1.0</ambient>
+            <diffuse>0.1 0.1 0.1 1.0</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 16L İLAÇLAMA DRONUMUZ -->
+    <include>
+      <uri>model://iris_agricultural</uri>
+      <pose degrees="true">0 0 0.195 0 0 90</pose>
+    </include>
+
+  </world>
+</sdf>

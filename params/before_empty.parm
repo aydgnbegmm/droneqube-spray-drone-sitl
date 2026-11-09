@@ -1,0 +1,49 @@
+# ====================================================================
+# DRONEQUBE SEÇENEK B: BOŞ TANK SENARYOSU (18.0 kg Kuru Ağırlık)
+# Aday: Begüm Aydoğan Çiçin
+# ====================================================================
+
+# 1. Kütle ve İtki Dinamikleri
+SIM_FRM_MASS,18.0
+SIM_FRM_HOVR_THR,0.37
+MOT_THST_HOVER,0.37
+MOT_HOVER_LEARN,2
+
+# 2. Tutum Kontrolü (Cascade Rate PID & Feed-Forward)
+ATC_RAT_RLL_P,0.135
+ATC_RAT_RLL_I,0.135
+ATC_RAT_RLL_D,0.0036
+ATC_RAT_RLL_FF,0.000
+
+ATC_RAT_PIT_P,0.135
+ATC_RAT_PIT_I,0.135
+ATC_RAT_PIT_D,0.0036
+ATC_RAT_PIT_FF,0.000
+
+ATC_RAT_YAW_P,0.180
+ATC_RAT_YAW_I,0.018
+ATC_RAT_YAW_D,0.000
+ATC_RAT_YAW_FF,0.000
+
+# 3. İvme Limitleri (Boş Gövde Çevikliği)
+ATC_ACC_R_MAX,720.0
+ATC_ACC_P_MAX,720.0
+ATC_ACC_Y_MAX,180.0
+WPNAV_ACCEL,200.0
+WPNAV_SPEED,500.0
+
+# 4. İniş ve Zemin Etkisi Sönümleme
+LAND_SPEED,50.0
+LAND_ALT_LOW,200.0
+
+# 5. Titreşim Filtreleme (34" Pervane Harmonik Notch)
+INS_HNTCH_ENABLE,1
+INS_HNTCH_MODE,1
+INS_HNTCH_FREQ,28.0
+INS_HNTCH_BW,14.0
+INS_HNTCH_HMNCS,7
+
+# 6. Emniyet & Sensör
+COMPASS_USE2,0
+BATT_FS_LOW_ACT,0
+BATT_FS_CRT_ACT,0

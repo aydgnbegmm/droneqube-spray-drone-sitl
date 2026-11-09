@@ -1,0 +1,17 @@
+=== BAŞARISIZ DENEMELER VE MÜHENDİSLİK BULGULARI ===
+
+Deneme 1 (Yetersiz İtki / Thr 100):
+- Durum: Gazebo modeline 16 kg tank eklendi ancak motor/pervane kaldırma katsayısı orijinal Iris değerinde bırakıldı.
+- Gözlem: GUIDED takeoff komutunda gaz %100'e (Thr 100) dayandı, araç yerden kesilemedi.
+- Neden & Çözüm: Toplam azami itki dolu ağırlığın en az 1.8 katı olmalıdır.
+
+Deneme 2 (Atalet-İtki Uyumsuzluğu ve Takla / Crash Disarm):
+- Durum: Pervane kaldırma alanı (<area>) ve motor çarpanı (<multiplier>) büyütüldü ancak gövde atalet tensörü (<ixx, iyy, izz>) küçük bırakıldı ve CG -12 cm aşağı kaydırıldı.
+- Gözlem: Araç kalkıştan hemen sonra ileri harekete geçerken aşırı açısal ivme nedeniyle ters döndü.
+- FC Hatası: "AP: Potential Thrust Loss (1)", "AP: Crash: Disarming: AngErr=170>30, Accel=0.1<3.0".
+- Neden & Çözüm: Kütle ve itki ölçeklenirken atalet momentleri (ixx, iyy, izz) de kütleyle orantılı büyütülmeli ve Rate PID kazançları yeni atalete uyarlanmalıdır.
+
+Deneme 3 (SITL Dahili -f quad Modelinde SIM_FRM_MASS Sınırlaması):
+- Durum: Gazebo yerine SITL'in dahili basit quad modelinde sadece SIM_FRM_MASS parametresi 3 kg'dan 18 kg'a çıkarıldı.
+- Gözlem: SIM_Frame.cpp içindeki otomatik itki ölçeklemesi nedeniyle hover gazı (Thr 37) hiç değişmedi.
+- Neden & Çözüm: Fiziksel kütle, atalet ve CG etkisini gerçekçi gözlemlemek için Gazebo 3D fizik modeli (iris_agricultural/model.sdf) kullanıldı.

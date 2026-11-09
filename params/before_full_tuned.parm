@@ -1,0 +1,49 @@
+# ====================================================================
+# DRONEQUBE SEÇENEK B: DOLU TANK SENARYOSU (34.0 kg MTOW - 16L Sıvı Ekli)
+# Aday: Begüm Aydoğan Çiçin
+# ====================================================================
+
+# 1. Kütle ve İtki Dinamikleri (Ağır Yük, İtki Marjı Daralması)
+SIM_FRM_MASS,34.0
+SIM_FRM_HOVR_THR,0.62
+MOT_THST_HOVER,0.62
+MOT_HOVER_LEARN,2
+
+# 2. Tutum Kontrolü (Ağır Gövdede Faz Gecikmesini Önleyen Feed-Forward Desteği)
+ATC_RAT_RLL_P,0.180
+ATC_RAT_RLL_I,0.180
+ATC_RAT_RLL_D,0.0055
+ATC_RAT_RLL_FF,0.120
+
+ATC_RAT_PIT_P,0.180
+ATC_RAT_PIT_I,0.180
+ATC_RAT_PIT_D,0.0055
+ATC_RAT_PIT_FF,0.120
+
+ATC_RAT_YAW_P,0.220
+ATC_RAT_YAW_I,0.025
+ATC_RAT_YAW_D,0.000
+ATC_RAT_YAW_FF,0.050
+
+# 3. Sıvı Çalkantısı Önleyici İvme Sınırları (Slosh Prevention - 1.35 Hz)
+ATC_ACC_R_MAX,360.0
+ATC_ACC_P_MAX,360.0
+ATC_ACC_Y_MAX,120.0
+WPNAV_ACCEL,150.0
+WPNAV_SPEED,400.0
+
+# 4. İniş ve Zemin Etkisi Sönümleme (Ağır Kütleyle Güvenli Dokunuş)
+LAND_SPEED,40.0
+LAND_ALT_LOW,200.0
+
+# 5. Titreşim Filtreleme (Harmonik Notch Filtresi)
+INS_HNTCH_ENABLE,1
+INS_HNTCH_MODE,1
+INS_HNTCH_FREQ,28.0
+INS_HNTCH_BW,14.0
+INS_HNTCH_HMNCS,7
+
+# 6. Emniyet & Sensör
+COMPASS_USE2,0
+BATT_FS_LOW_ACT,0
+BATT_FS_CRT_ACT,0
