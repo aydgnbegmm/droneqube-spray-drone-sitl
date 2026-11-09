@@ -1,32 +1,36 @@
 #!/usr/bin/env python3
 """
-Spray drone SITL test: takeoff -> hover -> kare rota -> LAND, telemetri CSV kaydeder.
+Spray drone SITL test: takeoff -> tarla uzerinde hover -> tarla rotasi -> hassas pede LAND, telemetri CSV kaydeder.
 
 Kullanim:
-  python3 run_scenario.py --label empty --conn udp:127.0.0.1:14560
-  python3 run_scenario.py --label full  --conn udp:127.0.0.1:14560 --set MOT_HOVER_LEARN=0 MOT_THST_HOVER=0.55
-
-Onkosul: Gazebo modelindeki kutle (ve gerekirse motor itkisi) elle degistirilmis olmali.
-Bu script kutleyi DEGISTIRMEZ; sadece etiketler ve kaydeder.
+  python3 run_scenario.py --label empty --mass 12 --set MOT_HOVER_LEARN=0
+  python3 run_scenario.py --label full  --mass 28 --set MOT_HOVER_LEARN=0
+  python3 run_scenario.py --label full_tuned --mass 28 --set MOT_HOVER_LEARN=0 MOT_THST_HOVER=0.68 WPNAV_ACCEL=150 ATC_ACC_R_MAX=360 ATC_ACC_P_MAX=360 LAND_SPEED=40
 """
 import argparse, csv, math, time, json
 from pymavlink import mavutil
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--label", required=True, help="orn. empty / full")
-ap.add_argument("--mass", type=float, default=None, help="Gazebo'da ayarladiginiz toplam kutle (kg), sadece kayit icin")
+ap.add_argument("--label", required=True, help="orn. empty / full / full_tuned")
+ap.add_argument("--mass", type=float, default=None, help="Gazebo'da ayarlanan toplam kutle (kg)")
 ap.add_argument("--conn", default="udp:127.0.0.1:14560")
 ap.add_argument("--alt", type=float, default=5.0)
 ap.add_argument("--side", type=float, default=20.0, help="kare kenari (m)")
 ap.add_argument("--hover_s", type=float, default=15.0)
+ap.add_argument("--field", action="store_true", default=True, help="Mission Planner tarla koordinatlari uzerinde uc")
+ap.add_argument("--local-square", action="store_true", help="Home etrafinda 20x20m kare uc")
 ap.add_argument("--set", nargs="*", default=[], help="PARAM=deger")
 ap.add_argument("--out", default=None)
 args = ap.parse_args()
 out = args.out or f"log_{args.label}.csv"
 
+print(f"\n========================================================")
+print(f" [SENARYO BASLADI] Etiket: {args.label.upper()} | Kutle: {args.mass} kg")
+print(f"========================================================")
+
 m = mavutil.mavlink_connection(args.conn)
 m.wait_heartbeat()
-print("Heartbeat alindi, sys", m.target_system)
+print("[BAGLANTI] Heartbeat alindi, sys", m.target_system)
 
 def set_param(name, val):
     m.mav.param_set_send(m.target_system, m.target_component, name.encode(), float(val),
@@ -50,9 +54,8 @@ used = {p: get_param(p) for p in ["MOT_THST_HOVER", "MOT_HOVER_LEARN", "ATC_ACC_
                                    "WPNAV_ACCEL", "WPNAV_SPEED", "PSC_ACCZ_P", "PSC_ACCZ_I",
                                    "INS_HNTCH_ENABLE", "MOT_THST_EXPO"]}
 json.dump({"label": args.label, "mass_kg": args.mass, "params": used}, open(out.replace(".csv", "_meta.json"), "w"), indent=1)
-print("Parametreler:", used)
+print("[PARAMETRELER]", used)
 
-# istek: mesaj hizlari
 for mid, hz in [(mavutil.mavlink.MAVLINK_MSG_ID_LOCAL_POSITION_NED, 20),
                 (mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE, 20),
                 (mavutil.mavlink.MAVLINK_MSG_ID_SERVO_OUTPUT_RAW, 10),
@@ -100,7 +103,7 @@ def mode(name):
     m.mav.set_mode_send(m.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mid)
     wait(1)
 
-def goto(x, y, z_ned, tol=1.0, timeout=40):
+def goto(x, y, z_ned, tol=1.2, timeout=45):
     state["sp"] = (x, y, z_ned)
     t_end = time.time() + timeout
     while time.time() < t_end:
@@ -115,7 +118,8 @@ def goto(x, y, z_ned, tol=1.0, timeout=40):
     events.append((time.time() - state["t0"], f"goto timeout {x},{y},{z_ned}"))
     return False
 
-# --- ucus ---
+# --- UCUS FAZLARI ---
+print(f"[FAZ 1/4] GUIDED mod ve Arm -> Kalkis hedefi: {args.alt} m")
 mode("GUIDED")
 state["phase"] = "arm"
 m.arducopter_arm(); m.motors_armed_wait()
@@ -131,16 +135,44 @@ while time.time() < t_end:
         break
     time.sleep(0.1)
 
-state["phase"] = "hover"
-goto(0, 0, -args.alt, tol=0.5)
-wait(args.hover_s)
+if args.field and not args.local_square:
+    # Mission Planner tarla_mission.txt ve Gazebo agricultural_field koordinatlari (North, East)
+    hx, hy = -8.0, -72.0
+    print(f"[GECIS] Hassas Inis Pedinden Tarla Baslangicina Gidiliyor ({hx}m K, {hy}m D)...")
+    state["phase"] = "transit"
+    goto(hx, hy, -args.alt, tol=1.5, timeout=45)
 
-state["phase"] = "route"
-s = args.side
-for (x, y) in [(s, 0), (s, s), (0, s), (0, 0)]:
-    goto(x, y, -args.alt, tol=1.0)
+    print(f"[FAZ 2/4] Tarla Uzerinde Sabit Hover ({args.hover_s} sn)...")
+    state["phase"] = "hover"
+    goto(hx, hy, -args.alt, tol=0.8)
+    wait(args.hover_s)
+
+    print("[FAZ 3/4] Tarla Ekin Siralari Uzerinde Rota Uculuyor...")
+    state["phase"] = "route"
+    field_wps = [(22.0, -78.0), (25.0, -58.0), (-5.0, -52.0), (hx, hy)]
+    for idx, (x, y) in enumerate(field_wps, 1):
+        print(f"  -> Tarla Kose {idx}/4: ({x:.0f}m, {y:.0f}m)")
+        goto(x, y, -args.alt, tol=1.2)
+        wait(2)
+
+    print("[DONUS] Tarladan Hassas Inis Pedine (Home 0,0) Donuluyor...")
+    state["phase"] = "transit"
+    goto(0, 0, -args.alt, tol=1.0, timeout=45)
     wait(2)
+else:
+    print(f"[FAZ 2/4] Sabit Hover ({args.hover_s} sn)...")
+    state["phase"] = "hover"
+    goto(0, 0, -args.alt, tol=0.5)
+    wait(args.hover_s)
 
+    print(f"[FAZ 3/4] {args.side}x{args.side}m Kare Rota Uculuyor...")
+    state["phase"] = "route"
+    s = args.side
+    for (x, y) in [(s, 0), (s, s), (0, s), (0, 0)]:
+        goto(x, y, -args.alt, tol=1.0)
+        wait(2)
+
+print("[FAZ 4/4] Hassas Inis Pedine Inis (LAND Modu)...")
 state["phase"] = "land"
 mode("LAND")
 while True:
@@ -151,7 +183,7 @@ while True:
         wait(1); break
     if lp and -lp.z < 0.05 and abs(lp.vz) < 0.05:
         wait(3); break
-    if time.time() - state["t0"] > 300:
+    if time.time() - state["t0"] > 360:
         break
     time.sleep(0.05)
 
@@ -164,4 +196,4 @@ with open(out, "w", newline="") as f:
 with open(out.replace(".csv", "_events.txt"), "w") as f:
     for t, txt in events:
         f.write(f"{t:.1f}\t{txt}\n")
-print("Kaydedildi:", out, len(rows), "satir")
+print(f"[TAMAMLANDI] Kaydedildi: {out} ({len(rows)} satir)\n")

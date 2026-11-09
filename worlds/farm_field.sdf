@@ -5,7 +5,6 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
-
     <plugin filename="gz-sim-physics-system"
       name="gz::sim::systems::Physics">
     </plugin>
@@ -34,6 +33,8 @@
     </scene>
 
     <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
       <latitude_deg>-35.363262</latitude_deg>
       <longitude_deg>149.165237</longitude_deg>
       <elevation>584</elevation>
@@ -43,12 +44,18 @@
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 10 0 0 0</pose>
-      <diffuse>0.85 0.85 0.85 1</diffuse>
-      <specular>0.2 0.2 0.2 1</specular>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.8 0.8 0.8 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
-    <!-- Zemin Düzlemi (Yeşil Çim Zemin) -->
+    <!-- DÜZ ÇİMEN ZEMİN (PİST KALDIRILDI) -->
     <model name="ground_plane">
       <static>true</static>
       <link name="link">
@@ -75,16 +82,16 @@
       </link>
     </model>
 
-    <!-- GERÇEK KOORDİNATLARA HİZALANMIŞ TARLA (Mission Planner Rota Altı: X=-85m, Y=+22m) -->
+    <!-- MISSION PLANNER TARLA ROTASIYLA (tarla_mission.txt) BİREBİR HİZALI TARLA -->
+    <!-- ArduPilotPlugin NWU dönüşümü: Gazebo X = North (+14m), Gazebo Y = -East (+79m) -->
     <model name='agricultural_field'>
       <static>true</static>
-      <!-- Tam olarak waypointlerin merkezine oturtuyoruz -->
-      <pose>-85 22 0.015 0 0 0.17</pose>
+      <pose>14 79 0.015 0 0 -0.17</pose>
       <link name='field_link'>
         <visual name='field_soil'>
           <geometry>
             <box>
-              <size>65 95 0.02</size>
+              <size>95 65 0.02</size>
             </box>
           </geometry>
           <material>
@@ -93,78 +100,70 @@
             <specular>0.05 0.05 0.05 1.0</specular>
           </material>
         </visual>
-        <!-- 6 Sıra Ekin / Tarım Şeridi -->
+        <!-- 6 Sıra Ekin / Tarım Şeridi (Kuzey-Güney doğrultusunda) -->
         <visual name='row_1'>
-          <pose>-22 0 0.03 0 0 0</pose>
-          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <pose>0 -22 0.03 0 0 0</pose>
+          <geometry><box><size>90 3.5 0.04</size></box></geometry>
           <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
         </visual>
         <visual name='row_2'>
-          <pose>-13 0 0.03 0 0 0</pose>
-          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <pose>0 -13 0.03 0 0 0</pose>
+          <geometry><box><size>90 3.5 0.04</size></box></geometry>
           <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
         </visual>
         <visual name='row_3'>
-          <pose>-4 0 0.03 0 0 0</pose>
-          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <pose>0 -4 0.03 0 0 0</pose>
+          <geometry><box><size>90 3.5 0.04</size></box></geometry>
           <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
         </visual>
         <visual name='row_4'>
-          <pose>5 0 0.03 0 0 0</pose>
-          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <pose>0 5 0.03 0 0 0</pose>
+          <geometry><box><size>90 3.5 0.04</size></box></geometry>
           <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
         </visual>
         <visual name='row_5'>
-          <pose>14 0 0.03 0 0 0</pose>
-          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <pose>0 14 0.03 0 0 0</pose>
+          <geometry><box><size>90 3.5 0.04</size></box></geometry>
           <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
         </visual>
         <visual name='row_6'>
-          <pose>23 0 0.03 0 0 0</pose>
-          <geometry><box><size>3.5 90 0.04</size></box></geometry>
+          <pose>0 23 0.03 0 0 0</pose>
+          <geometry><box><size>90 3.5 0.04</size></box></geometry>
           <material><ambient>0.15 0.52 0.12 1</ambient><diffuse>0.2 0.65 0.15 1</diffuse></material>
         </visual>
       </link>
     </model>
 
-    <!-- HASSAS İNİŞ PEDİ & DOLUM İSTASYONU (Kalkış / Home Noktası: X=0, Y=0) -->
+    <!-- HASSAS İNİŞ PEDİ (Home / Kalkış-İniş Noktası: 0, 0) -->
     <model name='precision_landing_pad'>
       <static>true</static>
-      <pose>0 0 0.015 0 0 0</pose>
+      <pose>0 0 0.02 0 0 0</pose>
       <link name='pad_link'>
-        <visual name='pad_base'>
+        <visual name='pad_outer'>
           <geometry>
-            <cylinder>
-              <radius>1.2</radius>
-              <length>0.02</length>
-            </cylinder>
+            <cylinder><radius>1.2</radius><length>0.02</length></cylinder>
           </geometry>
           <material>
-            <ambient>0.9 0.6 0.0 1.0</ambient>
-            <diffuse>1.0 0.7 0.0 1.0</diffuse>
+            <ambient>0.95 0.75 0.0 1</ambient>
+            <diffuse>1.0 0.82 0.0 1</diffuse>
           </material>
         </visual>
-        <!-- Merkez Hedef Dairesi -->
-        <visual name='pad_center'>
-          <pose>0 0 0.012 0 0 0</pose>
+        <visual name='pad_inner'>
+          <pose>0 0 0.005 0 0 0</pose>
           <geometry>
-            <cylinder>
-              <radius>0.4</radius>
-              <length>0.005</length>
-            </cylinder>
+            <cylinder><radius>0.4</radius><length>0.022</length></cylinder>
           </geometry>
           <material>
-            <ambient>0.1 0.1 0.1 1.0</ambient>
-            <diffuse>0.1 0.1 0.1 1.0</diffuse>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.15 0.15 0.15 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- 16L İLAÇLAMA DRONUMUZ -->
     <include>
       <uri>model://iris_agricultural</uri>
-      <pose degrees="true">0 0 0.195 0 0 90</pose>
+      <pose degrees="true">0 0 0.195 0 0 0</pose>
     </include>
 
   </world>
