@@ -115,52 +115,27 @@ Aşağıdaki metrikler `run_scenario.py` ile koşulan üç senaryonun (`logs/log
 
 ---
 
-## Mühendislik Yaklaşımı ve Tasarım Kararları (Soru – Cevap)
+## Metodoloji ve Kontrol Tasarımı
 
-### 1. Fiziksel Dron Özelliklerini ve Uçuş Metriklerini Hangi Dosyada, Hangi Değişkenlerle Tanımladık?
-- **Soru:** Dronun fiziksel özelliklerini (16 L tank, bom, kütle, ağırlık merkezi, atalet) ve uçuş kontrol değişkenlerini hangi dosyalarda verdik?
-- **Cevap:** Gerçek bir hava aracında gövde fiziği mekanik tasarımda, kontrol parametreleri ise uçuş kontrolcüsünde bulunduğu için iki ayrı katman kullandık:
-  1. **3B Fizik ve Kütle/CG Katmanı (`models/iris_agricultural/model.sdf`):**
-     - Gövde altına `spray_tank_link` (16 L mavi silindirik tank + 80 cm ilaçlama bomu + 4 kırmızı nozul) ekledik ve `spray_tank_joint` ile `base_link`'e bağladık.
-     - **Boş Tank (`empty`)**: `spray_tank_link` kütlesi `<mass>0.001</mass>` ve ağırlık merkezi `<pose>0 0 0 0 0 0</pose>` (tam merkezde).
-     - **Dolu Tank (`full` ve `full_tuned`)**: `spray_tank_link` içinde ölçekli sıvı kütlesi `<mass>0.85</mass>`, artırılmış atalet tensörü (`ixx=0.012, iyy=0.012, izz=0.015`) ve kaçık ağırlık merkezi `<pose>0.025 0.015 -0.14 0 0 0</pose>` (**+2.5 cm ileri, +1.5 cm sağa, 14 cm aşağı**) tanımlandı.
-  2. **Otopilot Kontrol ve Senaryo Katmanı (`run_scenario.py`):**
-     - `--set` argümanıyla verilen ArduPilot parametrelerini (`MOT_HOVER_LEARN`, `MOT_THST_HOVER`, `WPNAV_ACCEL`, `ATC_ACC_R_MAX`, `ATC_ACC_P_MAX`, `LAND_SPEED`) MAVLink `PARAM_SET` mesajlarıyla SITL'e yazdı ve 20 Hz telemetri kaydını başlattı.
+### 1. Fiziksel Modelleme (`models/iris_agricultural/model.sdf`)
+Gerçek bir hava aracında gövde fiziği mekanik tasarımda, kontrol parametreleri ise uçuş kontrolcüsünde yer aldığı için modelleme iki ayrı katmanda gerçekleştirilmiştir:
+- **Gövde ve İlaçlama Donanımı:** Standart `iris` gövdesi altına `spray_tank_link` (16 L silindirik sıvı tankı, 80 cm püskürtme bomu ve 4 adet nozul) eklenmiş ve `spray_tank_joint` ile `base_link`'e bağlanmıştır.
+- **Boş Tank (`empty` – 12 kg ölçekli karşılığı):** `spray_tank_link` kütlesi `<mass>0.001</mass>` ve ağırlık merkezi `<pose>0 0 0 0 0 0</pose>` (simetrik merkezde) tanımlanmıştır.
+- **Dolu Tank (`full` ve `full_tuned` – 28 kg ölçekli karşılığı):** Ölçekli sıvı kütlesi `<mass>0.85</mass>`, artırılmış atalet tensörü (`ixx=0.012, iyy=0.012, izz=0.015`) ve kaçık ağırlık merkezi `<pose>0.025 0.015 -0.14 0 0 0</pose>` (**+2.5 cm ileri, +1.5 cm sağa, 14 cm aşağı**) olarak modellenmiştir.
 
-### 2. Neden Karşılaştırma Testinde 43 Waypoint'li Tarlanın Tamamı Yerine 20×20 m Kare Rotayı Uçtuk?
-- **Soru:** `missions/tarla_mission.txt` içinde 43 waypoint'li tam tarla ilaçlama görevimiz varken neden 3 senaryo karşılaştırmasını `kalkış → 15 sn hover → 20×20 m kare rota → iniş` şeklinde yaptık?
-- **Cevap:**
-  1. **Görev İsteri:** Teknik görev dokümanı açıkça *"SITL üzerinde en az iki farklı kütle/yük senaryosu için kalkış–hover–kısa rota–iniş karşılaştırması yapın"* şartını koşmaktadır.
-  2. **Faz İzolasyonu (Step Response Analizi):** Tam tarla görevinde dron sürekli ileri uçar; 15 saniyelik saf **hover (askıda kalma)** fazı yoktur. Oysa kontrol mühendisliğinde dikey basamak aşımını (`takeoff`), dış bozucu yokken açısal ve yatay salınımı (`hover`), hem Roll hem Pitch ekseninde 90° keskin köşe dönüşlerini (`route`) ve son 2 metredeki iniş hızını (`land`) ayrı ayrı ölçebilmek için fazların net ayrılması gerekir.
-  3. **Birebir Tekrarlanabilirlik:** ~85 saniyelik standart test her üç senaryoda saniyesi saniyesine aynı komutları uygular; böylece `comparison.png` üzerinde üç eğri üst üste bindirildiğinde farklar doğrudan okunur.
+### 2. Faz İzolasyonlu Senaryo ve Telemetri Hattı (`run_scenario.py` & `analyze.py`)
+Mission Planner için hazırlanan 43 waypoint'li tam tarla ilaçlama görevine (`missions/tarla_mission.txt`) ek olarak, kontrol döngüsü basamak yanıtlarını (step response) faz bazında ayrıştırmak amacıyla tekrarlanabilir bir test dizisi (`GUIDED kalkış → 15 sn sabit hover → 20×20 m kare rota → LAND`) uygulanmıştır:
+- **Telemetri Kaydı:** `run_scenario.py`, uçuş öncesinde MAVLink `PARAM_SET` ile senaryo parametrelerini yazar ve `MAV_CMD_SET_MESSAGE_INTERVAL` komutuyla `LOCAL_POSITION_NED` (20 Hz), `ATTITUDE` (20 Hz), `SERVO_OUTPUT_RAW` (10 Hz), `VIBRATION` (5 Hz) ve `EKF_STATUS_REPORT` (2 Hz) akışlarını talep ederek `logs/log_*.csv` dosyalarını oluşturur.
+- **Metrik ve Grafik Üretimi:** `analyze.py`, kaydedilen zaman serilerini uçuş fazlarına (`takeoff`, `hover`, `route`, `land`) göre filtreleyerek kalkış aşımını, askıdaki açısal/yatay standart sapmaları, 90° köşe dönüşlerindeki maksimum irtifa çökmesini, CG kaynaklı motor PWM dengesizliğini ve son 2 metredeki iniş dikey hızını hesaplayıp `metrics_summary.csv` ve `figures/comparison.png` çıktılarını üretir.
 
-### 3. Grafikler (`comparison.png`) ve Metrik Tablosu (`metrics_summary.csv`) Nasıl Üretildi?
-- **Soru:** Rapordaki ve README'deki grafikler ile tablo verileri nasıl üretildi?
-- **Cevap:**
-  1. **Veri Toplama (`run_scenario.py`):** Uçuş sırasında ArduPilot SITL'den `MAV_CMD_SET_MESSAGE_INTERVAL` komutuyla `LOCAL_POSITION_NED` (20 Hz), `ATTITUDE` (20 Hz), `SERVO_OUTPUT_RAW` (10 Hz), `VIBRATION` (5 Hz) ve `EKF_STATUS_REPORT` (2 Hz) mesajları çekildi. Her satıra o anki uçuş fazı (`arm`, `takeoff`, `hover`, `route`, `land`), hedef konum (`sp_x, sp_y, sp_z`), gerçek konum/hız (`x, y, z, vx, vy, vz`), açılar (`roll, pitch, yaw`) ve 4 motorun PWM değerleri (`pwm1..pwm4`) yazılarak `logs/log_*.csv` dosyaları oluşturuldu.
-  2. **İstatistiksel Hesaplama ve Çizim (`analyze.py`):** `Pandas`, `NumPy` ve `Matplotlib` kullanan `analyze.py` betiği:
-     - `d[d.phase == "takeoff"]` filtresiyle kalkıştaki maksimum irtifadan hedef irtifayı çıkararak **kalkış aşımını (`takeoff_overshoot_m`)**,
-     - `d[d.phase == "hover"]` filtresiyle 15 saniyelik askı süresince $\sqrt{\sigma_{\text{roll}}^2 + \sigma_{\text{pitch}}^2}$ formülüyle **açısal salınımı (`hover_roll_pitch_std_deg`)** ve $\sqrt{\sigma_x^2 + \sigma_y^2}$ ile **yatay gezintiyi (`hover_xy_std_m`)**,
-     - `d[d.phase == "route"]` filtresiyle köşe dönüşlerindeki **maksimum irtifa çökmesini (`route_alt_err_max_m`)**,
-     - `pwm1..pwm4` sütunlarından ortalama PWM'i, maksimum PWM'i, `(max_motor_ort - min_motor_ort) / (genel_ort - 1000)` formülüyle **CG kaynaklı motor dengesizliğini (`pwm_imbalance_pct`)** ve `PWM > 1900 µs` geçen zaman oranını (`sat_pct_time_pwm>1900`),
-     - `d[(d.phase == "land") & (alt < 2.0)]` filtresiyle **son 2 metredeki ortalama ve maksimum dikey iniş hızını (`landing_vz_*`)** hesapladı ve 4 alt grafikten (İrtifa, X-Y Yörünge, Roll/Pitch, Ortalama PWM) oluşan `figures/comparison.png` dosyasını çizdi.
+### 3. Telemetri Bulgularına Dayalı Kontrol İyileştirmesi (`full` → `full_tuned`)
+Ayarsız dolu tank (`full`) koşusunda gözlemlenen iki temel kısıt üzerinden `full_tuned` parametre seti belirlenmiştir:
+- **Askı Gazı İleri-Beslemesi (`MOT_THST_HOVER: 0.39 → 0.68`):** Kütle artışıyla ortalama motor komutu `1561.0 µs`'den `1633.9 µs`'ye (+73 µs) yükselmiştir. İrtifa kontrolcüsünün (`PSC_ACCZ_I`) integratör birikimini beklememesi için gerçek askı gazı doğrudan ileri-besleme olarak tanımlanmıştır (deney sırasında A/B tutarlılığı için `MOT_HOVER_LEARN=0` ile öğrenme dondurulmuştur).
+- **İvme Sınırlaması (`WPNAV_ACCEL: 250 → 150`, `ATC_ACC_R/P_MAX: 1100 → 360`, `LAND_SPEED: 50 → 40`):** `full` koşusunda 90° köşe dönüşlerinde motorların `1950 µs` doyuma ulaşması (`%2.48` süre) ve `0.41 m` irtifa çökmesi nedeniyle yatay ve açısal ivme limitleri düşürülmüştür. Bu düzenleme köşe dönüşlerindeki irtifa çökmesini **`0.31 m`'ye (%24 iyileşme)**, hover yatay gezintisini **`0.214 m`'ye (%38 iyileşme)** ve açısal salınımı **`5.08°`'ye (%18 iyileşme)** indirmiştir.
 
-### 4. Hangi Veriler Bizi Yönlendirdi ve `full_tuned` Parametrelerini Neye Göre Seçtik?
-- **Soru:** Boş (`empty`) ve Ayarsız Dolu (`full`) koşular arasındaki hangi bulgular `full_tuned` ayarlarını belirledi?
-- **Cevap:**
-  - **Bulgu 1 (Askı Gazı Kayması):** `empty` koşusunda `1561.0 µs` olan ortalama PWM, `full` koşusunda **`1633.9 µs`**'ye çıktı (`+73 µs`). Kontrolcü `MOT_THST_HOVER=0.39` değerinde kaldığı için irtifa kontrolcüsünün I-terimi bu farkı kapatana kadar dron gecikmeli tepki verdi. **Karar:** `MOT_THST_HOVER=0.68` yapılarak ağır kütlenin askı gazı doğrudan ileri-besleme (feed-forward) olarak tanımlandı.
-  - **Bulgu 2 (Köşe Dönüşlerinde Motor Doyumu ve 41 cm İrtifa Çökmesi):** `full` koşusunda 90° köşe dönüşlerinde motor PWM'i **`1950 µs`**'ye vurdu (`%2.48` doyum süresi) ve dron köşelerde **`0.41 m` irtifa kaybetti**. **Karar:** Yatay ivme sınırı `WPNAV_ACCEL` `250`'den **`150 cm/s²`**'ye, açısal ivme sınırları `ATC_ACC_R_MAX` ve `ATC_ACC_P_MAX` `1100`'den **`360`**'a düşürüldü. **Sonuç:** Köşe dönüşlerindeki irtifa çökmesi `0.41 m`'den **`0.31 m`'ye (%24 iyileşme)**, hover yatay gezintisi `0.346 m`'den **`0.214 m`'ye (%38 iyileşme)**, açısal salınım ise `6.17°`'den **`5.08°`'ye (%18 iyileşme)** düştü.
-
-### 5. Kontrol Döngülerinin Rol Ayrımı ve PID Dışı Yöntemler (Gain Scheduling, LQR, MPC)
-- **Soru:** ArduPilot'ta Rate PID, Position Loop, Feed-Forward, Acceleration Limit, Notch Filter ve AutoTune'un rolleri nedir? LQR veya MPC kullanılmalı mıdır?
-- **Cevap:**
-  - **Roll/Pitch/Yaw Rate PID (`ATC_RAT_*`, 400 Hz):** Jiroskop açısal hız hatasını düzelten en iç döngüdür; kütle/atalet artışına (`P`, `D`) ve kaçık CG momentine (`I` terimi) doğrudan karşı koyar.
-  - **Altitude / Position Loop (`PSC_*`, `WPNAV_*`, 50–100 Hz):** Konum ve hız hatasını hedef eğim açısına ve hedef dikey ivmeye çeviren dış döngüdür.
-  - **Feed-Forward (`ATC_RAT_*_FF`, `MOT_THST_HOVER`):** Hata oluşmasını beklemeden komut türevine ve bilinen kütleye göre anında motor çıktısı üretir.
-  - **Acceleration Limit (`ATC_ACC_*`, `WPNAV_ACCEL`):** Komutların değişim hızını sınırlayarak ağır tankın savrulmasını, sıvı çalkantısını (sloshing) ve aktüatör doyumunu önler.
-  - **Harmonik Notch / FFT Filtreleri (`INS_HNTCH_*`):** Motor devir frekansındaki mekanik titreşimleri D-terimine ulaşmadan bastırır.
-  - **AutoTune / QuikTune:** `QuikTune` sahada güvenli ilk kazanç tahmini yapar; `AutoTune` ise gövdeye otomatik darbeler vererek kazançları ölçer. **Ancak yarı dolu sıvı tankıyla AutoTune yapılmamalıdır** (çalkantı ölçümü bozar); boş ve eşdeğer katı yükte ayrı ayrı yapılıp enterpole edilmelidir.
-  - **Gain Scheduling vs. LQR / MPC:** İlaçlama sırasında sıvı kütlesi 16 L'den 0 L'ye yavaşça azaldığı için debimetre veya tank seviye sensörüne bağlı **Gain Scheduling (Kazanç Çizelgeleme)** ArduPilot ile tam uyumludur, düşük risklidir ve en doğru mühendislik çözümüdür. Buna karşılık **LQR ve MPC**, ArduPilot'un standart 400 Hz kaskad mimarisiyle doğrudan uyumlu değildir; sıvı çalkantısı durumlarının gerçek zamanlı tahminini gerektirir ve model belirsizliğinde yüksek kararsızlık riski taşır.
+### 4. Kontrol Döngüsü Rol Ayrımı ve Yöntem Seçimi
+- **Kaskad Bileşenler:** İç döngü **Rate PID (`ATC_RAT_*`, 400 Hz)** açısal hız hatasını ve kaçık CG momentini (`I` terimi) bastırır; dış döngü **Position/Altitude Loop (`PSC_*`, `WPNAV_*`)** konum hatasını hedef eğim açısına çevirir; **Feed-Forward** faz gecikmesini azaltır; **Acceleration Limit** sıvı çalkantısını ve aktüatör doyumunu önler; **Harmonik Notch Filtre (`INS_HNTCH_*`)** ise motor/pervane titreşimlerini D-terimine ulaşmadan süzgeçler.
+- **Gain Scheduling vs. LQR/MPC:** İlaçlama görevinde sıvı kütlesi 16 L'den 0 L'ye monotonik olarak azaldığı için debimetre veya sıvı seviye sensörüne bağlı **Gain Scheduling (Kazanç Çizelgeleme)** ArduPilot mimarisiyle doğrudan uyumlu ve düşük risklidir. Buna karşılık **LQR ve MPC**, standart 400 Hz kaskad yapıyla doğrudan uyumlu olmayıp ölçülemeyen sıvı çalkantısı durumlarına karşı yüksek kararsızlık riski taşır.
 
 ---
 
