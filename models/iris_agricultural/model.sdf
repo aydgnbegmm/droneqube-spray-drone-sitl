@@ -8,13 +8,13 @@
 
     <!-- 16L TARIMSAL SIVI TANKI VE PÜSKÜRTME ÇUBUĞU (SPRAY BOOM) -->
     <link name='spray_tank_link'>
-      <pose relative_to='iris_with_standoffs::base_link'>0.025 0.015 -0.14 0 0 0</pose>
+      <pose relative_to='iris_with_standoffs::base_link'>0 0 -0.10 0 0 0</pose>
       <inertial>
-        <mass>0.85</mass>
+        <mass>0.001</mass>
         <inertia>
-          <ixx>0.012</ixx>
-          <iyy>0.012</iyy>
-          <izz>0.015</izz>
+          <ixx>1e-05</ixx>
+          <iyy>1e-05</iyy>
+          <izz>1e-05</izz>
         </inertia>
       </inertial>
       <!-- Mavi Silindirik Sıvı Deposu -->

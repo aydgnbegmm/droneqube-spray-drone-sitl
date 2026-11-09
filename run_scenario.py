@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Spray drone SITL test: takeoff -> tarla uzerinde hover -> tarla rotasi -> hassas pede LAND, telemetri CSV kaydeder.
+Spray drone SITL test: takeoff -> tarla uzerinde hover -> tarla uzerinde 20x20m kare rota -> hassas pede LAND, telemetri CSV kaydeder.
 
 Kullanim:
   python3 run_scenario.py --label empty --mass 12 --set MOT_HOVER_LEARN=0
@@ -17,8 +17,8 @@ ap.add_argument("--conn", default="udp:127.0.0.1:14560")
 ap.add_argument("--alt", type=float, default=5.0)
 ap.add_argument("--side", type=float, default=20.0, help="kare kenari (m)")
 ap.add_argument("--hover_s", type=float, default=15.0)
-ap.add_argument("--field", action="store_true", default=True, help="Mission Planner tarla koordinatlari uzerinde uc")
-ap.add_argument("--local-square", action="store_true", help="Home etrafinda 20x20m kare uc")
+ap.add_argument("--field", action="store_true", default=True, help="Gazebo farm_field.sdf tarlasi uzerinde uc (varsayilan)")
+ap.add_argument("--local-square", action="store_true", help="Home (0,0) etrafinda 20x20m kare uc")
 ap.add_argument("--set", nargs="*", default=[], help="PARAM=deger")
 ap.add_argument("--out", default=None)
 args = ap.parse_args()
@@ -103,7 +103,7 @@ def mode(name):
     m.mav.set_mode_send(m.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mid)
     wait(1)
 
-def goto(x, y, z_ned, tol=1.2, timeout=45):
+def goto(x, y, z_ned, tol=1.2, timeout=55):
     state["sp"] = (x, y, z_ned)
     t_end = time.time() + timeout
     while time.time() < t_end:
@@ -135,29 +135,31 @@ while time.time() < t_end:
         break
     time.sleep(0.1)
 
+s = args.side
 if args.field and not args.local_square:
-    # Mission Planner tarla_mission.txt ve Gazebo agricultural_field koordinatlari (North, East)
-    hx, hy = -8.0, -72.0
-    print(f"[GECIS] Hassas Inis Pedinden Tarla Baslangicina Gidiliyor ({hx}m K, {hy}m D)...")
+    # farm_field.sdf icindeki tarla merkezi: East = -78.36m, North = +13.81m
+    # 20x20m kare rotayi tarlanin tam merkezine (North: 3.8..23.8m, East: -88.4..-68.4m) oturtuyoruz
+    hx, hy = 3.8, -88.4
+    print(f"[GECIS] Inis Pedinden Tarla Merkezine Gidiliyor (Kuzey={hx}m, Dogu={hy}m)...")
     state["phase"] = "transit"
-    goto(hx, hy, -args.alt, tol=1.5, timeout=45)
+    goto(hx, hy, -args.alt, tol=1.5, timeout=60)
 
     print(f"[FAZ 2/4] Tarla Uzerinde Sabit Hover ({args.hover_s} sn)...")
     state["phase"] = "hover"
     goto(hx, hy, -args.alt, tol=0.8)
     wait(args.hover_s)
 
-    print("[FAZ 3/4] Tarla Ekin Siralari Uzerinde Rota Uculuyor...")
+    print(f"[FAZ 3/4] Tarla Ekin Siralari Uzerinde {s:.0f}x{s:.0f}m Kare Rota Uculuyor...")
     state["phase"] = "route"
-    field_wps = [(22.0, -78.0), (25.0, -58.0), (-5.0, -52.0), (hx, hy)]
+    field_wps = [(hx + s, hy), (hx + s, hy + s), (hx, hy + s), (hx, hy)]
     for idx, (x, y) in enumerate(field_wps, 1):
-        print(f"  -> Tarla Kose {idx}/4: ({x:.0f}m, {y:.0f}m)")
+        print(f"  -> Tarla Kose {idx}/4: (Kuzey={x:.1f}m, Dogu={y:.1f}m)")
         goto(x, y, -args.alt, tol=1.2)
         wait(2)
 
     print("[DONUS] Tarladan Hassas Inis Pedine (Home 0,0) Donuluyor...")
     state["phase"] = "transit"
-    goto(0, 0, -args.alt, tol=1.0, timeout=45)
+    goto(0, 0, -args.alt, tol=1.0, timeout=60)
     wait(2)
 else:
     print(f"[FAZ 2/4] Sabit Hover ({args.hover_s} sn)...")
@@ -165,9 +167,8 @@ else:
     goto(0, 0, -args.alt, tol=0.5)
     wait(args.hover_s)
 
-    print(f"[FAZ 3/4] {args.side}x{args.side}m Kare Rota Uculuyor...")
+    print(f"[FAZ 3/4] {s:.0f}x{s:.0f}m Kare Rota Uculuyor...")
     state["phase"] = "route"
-    s = args.side
     for (x, y) in [(s, 0), (s, s), (0, s), (0, 0)]:
         goto(x, y, -args.alt, tol=1.0)
         wait(2)

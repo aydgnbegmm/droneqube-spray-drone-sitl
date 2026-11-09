@@ -1,0 +1,15 @@
+{
+ "label": "empty",
+ "mass_kg": 12.0,
+ "params": {
+  "MOT_THST_HOVER": 0.39,
+  "MOT_HOVER_LEARN": 0.0,
+  "ATC_ACC_R_MAX": 1100.0,
+  "WPNAV_ACCEL": null,
+  "WPNAV_SPEED": null,
+  "PSC_ACCZ_P": null,
+  "PSC_ACCZ_I": null,
+  "INS_HNTCH_ENABLE": 0.0,
+  "MOT_THST_EXPO": 0.65
+ }
+}

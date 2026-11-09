@@ -45,3 +45,4 @@ open(sdf_path, "w").write(txt)
 shutil.copy(sdf_path, "/home/beg/ardupilot_gazebo/models/iris_agricultural/model.sdf")
 shutil.copy("/home/beg/spray_drone_sitl/worlds/farm_field.sdf", "/home/beg/ardupilot_gazebo/worlds/farm_field.sdf")
 print(msg)
+
