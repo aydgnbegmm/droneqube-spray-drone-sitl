@@ -40,6 +40,13 @@
         <em>16 L silindirik mavi tank, 80 cm ilaçlama bomu, 4 kırmızı nozul ve sarı/siyah hassas iniş pedi</em>
       </td>
     </tr>
+    <tr>
+      <td colspan="2">
+        <img src="figures/demo_auto_full_field.gif" alt="Tam Tarla Otonom İlaçlama Görevi (AUTO Modu - 44 Waypoint)" width="100%"/>
+        <br/>
+        <em><b>Tam Ölçekli Operasyonel Doğrulama (AUTO Modu – 44 Waypoint):</b> <code>full_tuned</code> (28 kg dolu tank, <code>MOT_THST_HOVER=0.68</code>, <code>WPNAV_ACCEL=150</code>, <code>ATC_ACC_R/P_MAX=360</code>) ayarlarıyla 66 sıralı tarlanın tamamında paralel ilaçlama hatlarının (boustrophedon), sıra sonu 180° dönüşlerinin, <code>DO_SET_CAM_TRIGG_DIST</code> püskürtme/tetikleme komutlarının ve <code>H</code> pedine inişin otonom icrası</em>
+      </td>
+    </tr>
   </table>
 </div>
 
@@ -136,6 +143,17 @@ Ayarsız dolu tank (`full`) koşusunda gözlemlenen iki temel kısıt üzerinden
 ### 4. Kontrol Döngüsü Rol Ayrımı ve Yöntem Seçimi
 - **Kaskad Bileşenler:** İç döngü **Rate PID (`ATC_RAT_*`, 400 Hz)** açısal hız hatasını ve kaçık CG momentini (`I` terimi) bastırır; dış döngü **Position/Altitude Loop (`PSC_*`, `WPNAV_*`)** konum hatasını hedef eğim açısına çevirir; **Feed-Forward** faz gecikmesini azaltır; **Acceleration Limit** sıvı çalkantısını ve aktüatör doyumunu önler; **Harmonik Notch Filtre (`INS_HNTCH_*`)** ise motor/pervane titreşimlerini D-terimine ulaşmadan süzgeçler.
 - **Gain Scheduling vs. LQR/MPC:** İlaçlama görevinde sıvı kütlesi 16 L'den 0 L'ye monotonik olarak azaldığı için debimetre veya sıvı seviye sensörüne bağlı **Gain Scheduling (Kazanç Çizelgeleme)** ArduPilot mimarisiyle doğrudan uyumlu ve düşük risklidir. Buna karşılık **LQR ve MPC**, standart 400 Hz kaskad yapıyla doğrudan uyumlu olmayıp ölçülemeyen sıvı çalkantısı durumlarına karşı yüksek kararsızlık riski taşır.
+
+### 5. İki Aşamalı Doğrulama: İzole Faz Testi (`GUIDED`) ve Tam Tarla Otonom Görevi (`AUTO`)
+Bu projede kontrol mühendisliği doğrulaması iki birbirini tamamlayan aşamada yürütülmüştür:
+1. **Aşama 1 – Faz İzoleli Karşılaştırmalı Benchmark (`TEST1`, `TEST2`, `TEST3` – `GUIDED` Modu):**
+   - Farklı kütle (`12 kg` vs. `28 kg`) ve kontrol parametrelerinin (`full` vs. `full_tuned`) etkisini bilimsel olarak ayrıştırmak için her üç senaryo birebir aynı zamanlamalı 4 fazda (`Kalkış → 15 sn Sabit Hover → 20×20 m Tarla İçi Kare Rota → Hassas İniş Pedine İniş`) koşulmuştur. Böylece basamak yanıtı (step response), askı salınımı ve 90° köşe dönüşü irtifa kaybı doğrudan karşılaştırılmıştır.
+2. **Aşama 2 – Tam Ölçekli Operasyonel Tarla Doğrulaması (`modeauto` – `AUTO` Modu, 44 Waypoint):**
+   - `TEST3` (`full_tuned`) ile doğrulanan optimal ağır yük parametre seti (`MOT_THST_HOVER=0.68`, `MOT_HOVER_LEARN=0`, `WPNAV_ACCEL=150 cm/s²`, `ATC_ACC_R_MAX=36000 cdeg/s²`, `ATC_ACC_P_MAX=36000 cdeg/s²`, `LAND_SPEED=40 cm/s`) kullanılarak 28 kg dolu tanklı dron **ArduPilot `AUTO` modunda** `missions/tarla_mission.txt` (44 waypoint) görevine sokulmuştur.
+   - Bu aşamanın desteklediği **mühendislik yaklaşımları**:
+     - **Sıra Sonu 180° U-Dönüşlerinde (Boustrophedon) İrtifa ve Doyum Koruması:** Tarla ilaçlamasında en kritik rejim, her paralel sıranın sonunda çit sınırında yapılan 180° keskin dönüşlerdir (`WP 4→6`, `WP 8→10`, ..., `WP 38→40`). `WPNAV_ACCEL=150` ve `ATC_ACC_R/P_MAX=360` sınırlamaları sayesinde dron 11 paralel hattın tamamını motor doyumu veya irtifa çökmesi yaşamadan 5.0 m sabit AGL irtifada taramıştır.
+     - **ArduPilot `WPNAV` + Görev Tetikleme (`DO_SET_CAM_TRIGG_DIST`) Uyumluluğu:** Standart kaskad PID mimarisini bozmadan yapılan parametre uyarlamasının, ArduPilot'un yerleşik `AUTO` yörünge planlayıcısı ve faydalı yük tetikleme komutlarıyla (`AP: Mission: SetCamTrigDst`) %100 uyumlu çalıştığı kanıtlanmıştır.
+     - **Uzun Süreli Dayanım ve Hassas Eve Dönüş (`RTL` / `LAND`):** ~6.5 dakikalık kesintisiz tam tarla görevi sonunda araç `WP 43/44` üzerinden `"H"` iniş pedine dönmüş ve `LAND_SPEED=40 cm/s` ile yumuşak iniş gerçekleştirmiştir.
 
 ---
 
